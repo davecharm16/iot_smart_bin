@@ -27,6 +27,7 @@ void initWiFi() {
  
 void setup() {
 	// Allow allocation of all timers
+  Serial.begin(115200);
 	ESP32PWM::allocateTimer(0);
 	ESP32PWM::allocateTimer(1);
 	ESP32PWM::allocateTimer(2);
