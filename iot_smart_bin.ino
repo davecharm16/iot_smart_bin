@@ -5,11 +5,12 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <Firebase_ESP_Client.h>
-
-
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
 
 FirebaseData fbdo;
-FirebaseData firebaseData;
+FirebaseAuth auth;
+FirebaseConfig config;
 FirebaseJson json;
 /////////////////////////////////////////////////
 /////////Utility Classes 
@@ -219,7 +220,11 @@ private:
 #define WIFI_SSID "HUAWEI-W8wQ"
 #define WIFI_PASSWORD "wonderful" 
 #define FIREBASE_PROJECT_ID "test-2ac5c"
-#define FIREBASE_WEB_API_KEY "AIzaSyAOMYONHuV6hMmfVUnoEadnALvnx6Qo2nU"
+#define FIREBASE_API_KEY "AIzaSyAOMYONHuV6hMmfVUnoEadnALvnx6Qo2nU"
+#define FIREBASE_DATABASE "https://test-2ac5c-default-rtdb.asia-southeast1.firebasedatabase.app"
+#define USER_EMAIL "123@gmail.com"
+#define USER_PASSWORD "12345678"
+
 
 #define SERVO_1_PIN 13
 #define SERVO_2_PIN 12
@@ -228,6 +233,7 @@ private:
 #define WET_PIN 34
 #define LCDCOLUMNS 16
 #define LCDROWS 2
+bool signupOK = false;
 
 
 
@@ -292,6 +298,31 @@ void initWiFi() {
     delay(1000);
   }
   Serial.println(WiFi.localIP());
+
+   /* Assign the api key (required) */
+  config.api_key = FIREBASE_API_KEY;
+
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+
+  /* Assign the RTDB URL (required) */
+  config.database_url = FIREBASE_DATABASE;
+
+  /* Sign up */
+  if (Firebase.signUp(&config, &auth, "", "")) {
+    Serial.println("ok");
+    signupOK = true;
+  }
+  else {
+    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+  }
+
+  /* Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
   myServo1.writeAngle(90);
   myServo2.writeAngle(90);
 }
@@ -307,8 +338,6 @@ void setup() {
   initWiFi();
   Serial.print("RRSI: ");
   Serial.println(WiFi.RSSI());
-  Firebase.begin(FIREBASE_PROJECT_ID, FIREBASE_AUTH);
-  Firebase.reconnectWiFi(true);
   Serial.println("Setup done");
   displayMessage("Setup Done", 0, true);
   displayMessage("Calibrating...", 0, true);
