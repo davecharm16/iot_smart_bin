@@ -186,7 +186,7 @@ private:
 #define SERVO_2_PIN 12
 #define INFRARED_PIN 14
 #define INDUCTIVE_PIN 27
-#define WET_PIN 39
+#define WET_PIN 34
 #define LCDCOLUMNS 16
 #define LCDROWS 2
 
@@ -209,8 +209,8 @@ LiquidCrystal_I2C lcd(0x27, LCDCOLUMNS, LCDROWS);
 enum MaterialType {
     NONE,
     METAL,
-    ORGANIC,
-    NON_ORGANIC
+    WET,
+    DRY
 };
 
 void displayMessage(const String& message, int line = 0, bool clearFirst = true) {
@@ -223,19 +223,25 @@ void displayMessage(const String& message, int line = 0, bool clearFirst = true)
 
 
 MaterialType detectMaterial() {
-    bool metalDetected = myInductiveSensor.detectObject();
-    bool organicDetected = myWetSensor.detectObject();
-    bool nonOrganicDetected = myIRSensor.detectObject() && !metalDetected && !organicDetected;
+    bool isMetalDetected = myInductiveSensor.detectObject();
+    bool isWetDetected = myWetSensor.detectObject();
+    bool isObjectDetected = myIRSensor.detectObject();
 
-    if (metalDetected) {
+    if(isObjectDetected) {
+      if(isMetalDetected){
         return METAL;
-    } else if (organicDetected) {
-        return ORGANIC;
-    } else if (nonOrganicDetected) {
-        return NON_ORGANIC;
-    } else {
-        return NONE;
+      }
+      else if (isWetDetected){
+        return WET;
+      }
+      else{
+        return DRY;
+      }
     }
+    else{
+      return NONE;
+    }
+
 }
 
 void initWiFi() {
@@ -265,7 +271,7 @@ void setup() {
   Serial.println("Setup done");
   displayMessage("Setup Done", 0, true);
   displayMessage("Calibrating...", 0, true);
-  myWetSensor.calibrate();
+  myWetSensor.calibrateWithAveraging();
   displayMessage("Calibration Done", 0, true);
   delay(1000);
 }
@@ -274,30 +280,30 @@ void setup() {
  
 void loop() {
 
-  // lcd.print("Scanning...");
-  // delay(3000); 
-  // MaterialType detectedMaterial = detectMaterial();
+  lcd.print("Scanning...");
+  delay(3000); 
+  MaterialType detectedMaterial = detectMaterial();
 
-  // lcd.clear();
+  lcd.clear();
 
-  // switch (detectedMaterial) {
-  //   case METAL:
-  //     Serial.print('Metal Detected \n');
-  //       lcd.print("Metal");         
-  //       break;
-  //   case ORGANIC:  
-  //       lcd.print("Organic");       
-  //       break;
-  //   case NON_ORGANIC: 
-  //       lcd.print("Non-organic"); 
-  //       break;
-  //   default:       
-  //       lcd.print("Nothing");      
-  //       break;
-  // }
-
-  // delay(2000); 
-  // lcd.clear();
-
+  switch (detectedMaterial) {
+    case METAL:
+      Serial.print('Metal Detected \n');
+        lcd.print("METAL");  
+        delay(2000); 
+        break;
+    case WET:  
+        lcd.print("WET");     
+        delay(2000); 
+        break;
+    case DRY: 
+        lcd.print("DRY"); 
+        delay(2000); 
+        break;
+    default:       
+        displayMessage("Scanning...",0, true);      
+        break;
+  }
+  lcd.clear();
 }
 
