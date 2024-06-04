@@ -24,25 +24,106 @@ public:
     }
 
     bool detectObject() override {
-        return (digitalRead(_pin) == HIGH); // Metal detected = HIGH
+        return (digitalRead(_pin) == LOW); // Metal detected = LOW
     }
 
 private:
     int _pin;
 };
 
-class WetSensor : public Sensor {
+class WetWasteSensor {
 public:
-    WetSensor(int pin) : _pin(pin) {
-        pinMode(_pin, INPUT);
+    WetWasteSensor(int sensorPin, int threshold = 500)
+        : sensorPin(sensorPin), threshold(threshold) {}
+
+    void begin() {
+        pinMode(sensorPin, INPUT);
     }
 
-    bool detectObject() override {
-        return (digitalRead(_pin) == HIGH); // Wetness detected = HIGH
+    bool detectObject() {
+        int moistureValue = analogRead(sensorPin);
+        Serial.print("Moisture Value: ");
+        Serial.println(moistureValue);
+        return moistureValue < threshold; // Inverted logic since lower value means wetter
+    }
+
+    // Calibration method (similar to the previous version)
+    void calibrate() {
+        Serial.println("WetWasteSensor Calibration:");
+        Serial.println("------------------------");
+
+        // Dry Calibration
+        Serial.println("1. Place DRY material on the sensor.");
+        Serial.println("2. Press any key to continue...");
+        while (!Serial.available());
+        Serial.read(); // Clear the buffer
+
+        long dryReading = analogRead(sensorPin);
+        Serial.print("Dry Reading: ");
+        Serial.println(dryReading);
+
+        // Wet Calibration
+        Serial.println("\n1. Place WET material on the sensor.");
+        Serial.println("2. Press any key to continue...");
+        while (!Serial.available());
+        Serial.read(); // Clear the buffer
+
+        long wetReading = analogRead(sensorPin);
+        Serial.print("Wet Reading: ");
+        Serial.println(wetReading);
+
+        // Calculate and Set Threshold
+        threshold = (dryReading + wetReading) / 2;
+        Serial.print("\nNew threshold set to: ");
+        Serial.println(threshold);
+        Serial.println("------------------------");
+    }
+
+    void calibrateWithAveraging(){
+      Serial.println("WetWasteSensor Calibration:");
+      Serial.println("------------------------");
+
+      // Dry Calibration
+      Serial.println("1. Place DRY material on the sensor.");
+      Serial.println("2. Press any key to continue...");
+      while (!Serial.available());
+      Serial.read(); // Clear the buffer
+
+      int numReadings = 10;
+      long dryReadingsTotal = 0;
+      for (int i = 0; i < numReadings; i++) {
+          dryReadingsTotal += analogRead(sensorPin);
+          delay(100); // Short delay between readings (adjust if needed)
+      }
+      long dryReading = dryReadingsTotal / numReadings;
+      Serial.print("Average Dry Reading: ");
+      Serial.println(dryReading);
+
+      // Wet Calibration
+      Serial.println("\n1. Place WET material on the sensor.");
+      Serial.println("2. Press any key to continue...");
+      while (!Serial.available());
+      Serial.read(); // Clear the buffer
+
+      long wetReadingsTotal = 0;
+      for (int i = 0; i < numReadings; i++) {
+          wetReadingsTotal += analogRead(sensorPin);
+          delay(100);
+      }
+      long wetReading = wetReadingsTotal / numReadings;
+      Serial.print("Average Wet Reading: ");
+      Serial.println(wetReading);
+
+      // Calculate and Set Threshold
+      threshold = (dryReading + wetReading) / 2;
+      Serial.print("\nNew threshold set to: ");
+      Serial.println(threshold);
+      Serial.println("------------------------");
     }
 
 private:
-    int _pin;
+    int sensorPin;
+    int threshold;
 };
 
 class InfraredSensor : public Sensor {
@@ -104,8 +185,8 @@ private:
 #define SERVO_1_PIN 13
 #define SERVO_2_PIN 12
 #define INFRARED_PIN 14
-#define INDUCTIVE_PIN 32  
-#define WET_PIN 33 
+#define INDUCTIVE_PIN 27
+#define WET_PIN 39
 #define LCDCOLUMNS 16
 #define LCDROWS 2
 
@@ -118,7 +199,7 @@ private:
 ESP32ServoClass myServo1(SERVO_1_PIN);
 ESP32ServoClass myServo2(SERVO_2_PIN);
 InductiveSensor myInductiveSensor(INDUCTIVE_PIN);
-WetSensor myWetSensor(WET_PIN);
+WetWasteSensor myWetSensor(WET_PIN);
 InfraredSensor myIRSensor(INFRARED_PIN);
 LiquidCrystal_I2C lcd(0x27, LCDCOLUMNS, LCDROWS);
 
@@ -183,22 +264,40 @@ void setup() {
   Serial.println(WiFi.RSSI());
   Serial.println("Setup done");
   displayMessage("Setup Done", 0, true);
+  displayMessage("Calibrating...", 0, true);
+  myWetSensor.calibrate();
+  displayMessage("Calibration Done", 0, true);
   delay(1000);
 }
 
 
  
 void loop() {
-  lcd.setCursor(0, 0);
-  // print message
-  lcd.print("I love you !!!");
-  delay(1000);
-  // clears the display to print new message
-  lcd.clear();
-  // set cursor to first column, second row
-  lcd.setCursor(0,1);
-  lcd.print("Donnaa!!!");
-  delay(1000);
-  lcd.clear();
+
+  // lcd.print("Scanning...");
+  // delay(3000); 
+  // MaterialType detectedMaterial = detectMaterial();
+
+  // lcd.clear();
+
+  // switch (detectedMaterial) {
+  //   case METAL:
+  //     Serial.print('Metal Detected \n');
+  //       lcd.print("Metal");         
+  //       break;
+  //   case ORGANIC:  
+  //       lcd.print("Organic");       
+  //       break;
+  //   case NON_ORGANIC: 
+  //       lcd.print("Non-organic"); 
+  //       break;
+  //   default:       
+  //       lcd.print("Nothing");      
+  //       break;
+  // }
+
+  // delay(2000); 
+  // lcd.clear();
+
 }
 
