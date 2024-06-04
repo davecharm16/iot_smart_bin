@@ -173,6 +173,41 @@ private:
     Servo servo;  
 };
 
+class UltrasonicFillLevel {
+public:
+    UltrasonicFillLevel(int trigPin, int echoPin, int binHeightCm) 
+        : trigPin(trigPin), echoPin(echoPin), binHeightCm(binHeightCm) { }
+
+    void begin() {
+        pinMode(trigPin, OUTPUT);
+        pinMode(echoPin, INPUT);
+    }
+
+    int getDistanceCm() {
+        // Standard ultrasonic sensor distance calculation
+        digitalWrite(trigPin, LOW);
+        delayMicroseconds(2);
+        digitalWrite(trigPin, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(trigPin, LOW);
+        long duration = pulseIn(echoPin, HIGH);
+        return duration * 0.0343 / 2; // Speed of sound calculation
+    }
+
+    int getFillLevelPercentage() {
+        int distance = getDistanceCm();
+        if (distance <= 0) {
+            return 100; // Bin is full or sensor error
+        }
+        int fillHeight = binHeightCm - distance;
+        return (fillHeight * 100) / binHeightCm; 
+    }
+
+private:
+    int trigPin;
+    int echoPin;
+    int binHeightCm;
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //PIN DEFINITIONS
@@ -305,5 +340,7 @@ void loop() {
         break;
   }
   lcd.clear();
+
+  
 }
 
