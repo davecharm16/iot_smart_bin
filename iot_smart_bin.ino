@@ -4,9 +4,13 @@
 #include <ESP32Servo.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+#include <Firebase_ESP_Client.h>
 
 
 
+FirebaseData fbdo;
+FirebaseData firebaseData;
+FirebaseJson json;
 /////////////////////////////////////////////////
 /////////Utility Classes 
 
@@ -213,9 +217,9 @@ private:
 //PIN DEFINITIONS
 
 #define WIFI_SSID "HUAWEI-W8wQ"
-#define WIFI_PASSWORD "wonderful"
-#define FIREBASE_HOST "fir-app-example.firebaseio.com"
-#define FIREBASE_AUTH "examplesd2asdasdasdasd2asd3asd2asd2as32das3d2as2da3"
+#define WIFI_PASSWORD "wonderful" 
+#define FIREBASE_PROJECT_ID "test-2ac5c"
+#define FIREBASE_WEB_API_KEY "AIzaSyAOMYONHuV6hMmfVUnoEadnALvnx6Qo2nU"
 
 #define SERVO_1_PIN 13
 #define SERVO_2_PIN 12
@@ -303,6 +307,8 @@ void setup() {
   initWiFi();
   Serial.print("RRSI: ");
   Serial.println(WiFi.RSSI());
+  Firebase.begin(FIREBASE_PROJECT_ID, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
   Serial.println("Setup done");
   displayMessage("Setup Done", 0, true);
   displayMessage("Calibrating...", 0, true);
