@@ -7,6 +7,7 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
+#include <time.h>
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -215,10 +216,11 @@ private:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//PIN DEFINITIONS
+//PIN  and VARIABLE DEFINITIONS
 
 #define WIFI_SSID "HUAWEI-W8wQ"
 #define WIFI_PASSWORD "wonderful" 
+#define BIN_ID "smart_bin_001"
 #define FIREBASE_PROJECT_ID "test-2ac5c"
 #define FIREBASE_API_KEY "AIzaSyAOMYONHuV6hMmfVUnoEadnALvnx6Qo2nU"
 #define FIREBASE_DATABASE "https://test-2ac5c-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -289,6 +291,28 @@ MaterialType detectMaterial() {
 
 }
 
+// Function to initialize and update time via NTP
+void updateTimeFromNTP() {
+    configTime(0, 3600, "pool.ntp.org", "time.nist.gov");
+    Serial.println("Waiting for time");
+    while (!time(nullptr)) {
+        Serial.print(".");
+        delay(1000);
+    }
+}
+
+// Function to get the current time in ISO8601 format
+String getCurrentTimeFormatted() {
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Failed to obtain time");
+        return "";
+    }
+    char timeString[25]; // Buffer to hold the time string
+    strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", &timeinfo); // ISO8601 format
+    return String(timeString);
+}
+
 void initWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -326,25 +350,7 @@ void initWiFi() {
   myServo1.writeAngle(90);
   myServo2.writeAngle(90);
 }
- 
-void setup() {
-  lcd.init();
-  // turn on LCD backlight                      
-  lcd.backlight();
-	// Allow allocation of all timers
-  Serial.begin(115200);
-  displayMessage("Initiating WIFI Connection...", 0, true);
 
-  initWiFi();
-  Serial.print("RRSI: ");
-  Serial.println(WiFi.RSSI());
-  Serial.println("Setup done");
-  displayMessage("Setup Done", 0, true);
-  displayMessage("Calibrating...", 0, true);
-  myWetSensor.calibrateWithAveraging();
-  displayMessage("Calibration Done", 0, true);
-  delay(1000);
-}
 
 void writeDataToFirestore(const String& collectionPath, MaterialType materialType) {
     if (Firebase.ready()) {
@@ -376,19 +382,19 @@ void writeDataToFirestore(const String& collectionPath, MaterialType materialTyp
     }
 }
 
-void sendSampleDataToFirestore(const String& collectionPath, const String& documentID) {
+void sendWasteData(const String& collectionPath, const String& documentID, const String& materialType) {
     if (Firebase.ready()) {
         FirebaseJson data;
 
         // Manually formatting the current time for Firestore
         // Ideally, you should replace this with actual time fetching and formatting
-        String formattedTime = "2021-06-01T12:00:00Z";  // Example static time, replace with actual formatted time
+        String formattedTime = getCurrentTimeFormatted();  // Example static time, replace with actual formatted time
 
         // Creating dummy data for the document
         FirebaseJson documentData;
-        documentData.set("sensorType/stringValue", "Inductive");
-        documentData.set("reading/integerValue", 42);
-        documentData.set("status/stringValue", "Active");
+        documentData.set("sensorType/stringValue", materialType);
+        // documentData.set("reading/integerValue", 42);
+        documentData.set("bin_id/stringValue", BIN_ID);
         documentData.set("timestamp/timestampValue", formattedTime);  // Using correctly formatted time
 
         // Setting the document fields
@@ -424,6 +430,26 @@ String generateRandomId(int length = 16) {
     return randomId;
 }
 
+void setup() {
+  lcd.init();
+  // turn on LCD backlight                      
+  lcd.backlight();
+	// Allow allocation of all timers
+  Serial.begin(115200);
+  displayMessage("Initiating WIFI Connection...", 0, true);
+
+  initWiFi();
+  Serial.print("RRSI: ");
+  Serial.println(WiFi.RSSI());
+  updateTimeFromNTP();
+  Serial.println("Setup done");
+  displayMessage("Setup Done", 0, true);
+  displayMessage("Calibrating...", 0, true);
+  myWetSensor.calibrateWithAveraging();
+  displayMessage("Calibration Done", 0, true);
+  delay(1000);
+}
+
 
 void loop() {
 
@@ -437,14 +463,17 @@ void loop() {
     case METAL:
       Serial.print('Metal Detected \n');
         lcd.print("METAL");  
+        sendWasteData("waste_data", generateRandomId(), "Metal");
         delay(2000); 
         break;
     case WET:  
-        lcd.print("WET");     
+        lcd.print("WET");   
+        sendWasteData("waste_data", generateRandomId(), "Wet");
         delay(2000); 
         break;
     case DRY: 
         lcd.print("DRY"); 
+        sendWasteData("waste_data", generateRandomId(), "Dry");
         delay(2000); 
         break;
     default:       
@@ -452,11 +481,7 @@ void loop() {
         break;
   }
 
-  // writeDataToFirestore("waste_data", detectedMaterial);
-  // sendDummyDataToFirestore("test_collection");
-  sendSampleDataToFirestore("sensorData", "sampleDoc");
   lcd.clear();
 
-  
 }
 
