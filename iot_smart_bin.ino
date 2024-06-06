@@ -346,8 +346,85 @@ void setup() {
   delay(1000);
 }
 
+void writeDataToFirestore(const String& collectionPath, MaterialType materialType) {
+    if (Firebase.ready()) {
+        FirebaseJson data;
+        FirebaseJson nestedData;
 
- 
+        // Use correct structure for Firestore
+        String materialTypeString = (materialType == METAL) ? "METAL" :
+                                    (materialType == WET) ? "WET" :
+                                    (materialType == DRY) ? "DRY" : "NONE";
+
+        // Setting nested data with the correct Firestore data types
+        nestedData.set("type/stringValue", materialTypeString); // Correct key for string type
+        nestedData.set("timestamp/timestampValue", Firebase.getCurrentTime()); // Correct key for timestamp
+
+        // Creating a data field that is a map containing the nested data
+        data.set("fields/data/mapValue", nestedData); // 'data' is a map that contains 'nestedData'
+
+        String fullPath = collectionPath;  // Ensure the collection path is correct
+
+        if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, "", fullPath, data.raw())) {
+            Serial.println("Document created successfully in Firestore!");
+            Serial.println("Auto-generated Document ID: " + String(fbdo.payload().c_str()));
+        } else {
+            Serial.println("Failed to create document in Firestore: " + fbdo.errorReason());
+        }
+    } else {
+        Serial.println("Firebase not ready. Check connection.");
+    }
+}
+
+void sendSampleDataToFirestore(const String& collectionPath, const String& documentID) {
+    if (Firebase.ready()) {
+        FirebaseJson data;
+
+        // Manually formatting the current time for Firestore
+        // Ideally, you should replace this with actual time fetching and formatting
+        String formattedTime = "2021-06-01T12:00:00Z";  // Example static time, replace with actual formatted time
+
+        // Creating dummy data for the document
+        FirebaseJson documentData;
+        documentData.set("sensorType/stringValue", "Inductive");
+        documentData.set("reading/integerValue", 42);
+        documentData.set("status/stringValue", "Active");
+        documentData.set("timestamp/timestampValue", formattedTime);  // Using correctly formatted time
+
+        // Setting the document fields
+        data.set("fields", documentData);
+
+        // Constructing the full path to the document
+        String fullPath = collectionPath + "/" + documentID;
+
+        // Creating or updating the document at the specified path in Firestore
+        if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, "", fullPath, data.raw())) {
+            Serial.println("Document created/updated successfully in Firestore at: " + fullPath);
+            Serial.println("Document Data: " + String(fbdo.payload().c_str()));
+        } else {
+            Serial.println("Failed to create/update document in Firestore: " + fbdo.errorReason());
+        }
+    } else {
+        Serial.println("Firebase not ready. Check connection.");
+    }
+}
+
+String generateRandomId(int length = 16) {
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    String randomId;
+    randomSeed(millis()); // Seed with milliseconds since boot for variation
+
+    for (int i = 0; i < length; ++i) {
+        randomId += alphanum[random(0, sizeof(alphanum) - 1)];
+    }
+    return randomId;
+}
+
+
 void loop() {
 
   lcd.print("Scanning...");
@@ -374,6 +451,10 @@ void loop() {
         displayMessage("Scanning...",0, true);      
         break;
   }
+
+  // writeDataToFirestore("waste_data", detectedMaterial);
+  // sendDummyDataToFirestore("test_collection");
+  sendSampleDataToFirestore("sensorData", "sampleDoc");
   lcd.clear();
 
   
