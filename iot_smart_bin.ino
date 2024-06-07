@@ -392,7 +392,7 @@ void sendWasteData(const String& collectionPath, const String& documentID, const
 
         // Creating dummy data for the document
         FirebaseJson documentData;
-        documentData.set("sensorType/stringValue", materialType);
+        documentData.set("type/stringValue", materialType);
         // documentData.set("reading/integerValue", 42);
         documentData.set("bin_id/stringValue", BIN_ID);
         documentData.set("timestamp/timestampValue", formattedTime);  // Using correctly formatted time
@@ -428,6 +428,10 @@ String generateRandomId(int length = 16) {
         randomId += alphanum[random(0, sizeof(alphanum) - 1)];
     }
     return randomId;
+}
+
+void sendFilterData(){
+  
 }
 
 void setup() {
