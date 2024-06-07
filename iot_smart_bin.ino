@@ -179,9 +179,9 @@ private:
     Servo servo;  
 };
 
-class UltrasonicFillLevel {
+class UltraSonicSensor {
 public:
-    UltrasonicFillLevel(int trigPin, int echoPin, int binHeightCm) 
+    UltraSonicSensor(int trigPin, int echoPin, int binHeightCm) 
         : trigPin(trigPin), echoPin(echoPin), binHeightCm(binHeightCm) { }
 
     void begin() {
@@ -201,12 +201,24 @@ public:
     }
 
     int getFillLevelPercentage() {
-        int distance = getDistanceCm();
-        if (distance <= 0) {
-            return 100; // Bin is full or sensor error
-        }
-        int fillHeight = binHeightCm - distance;
-        return (fillHeight * 100) / binHeightCm; 
+      int distance = getDistanceCm();
+
+      if (distance <= 0) {
+          return 100; // Bin is full or sensor error
+      }
+
+      // Adjust distance for the 5cm offset
+      distance += 5;
+
+      // Ensure the distance doesn't exceed the bin height
+      if (distance > binHeightCm) {
+          distance = binHeightCm;
+      }
+
+      int emptySpace = binHeightCm - distance; // Calculate the remaining empty space
+      int fillHeight = binHeightCm - emptySpace;  // Calculate the filled height
+
+      return (fillHeight * 100) / binHeightCm;
     }
 
 private:
@@ -230,6 +242,8 @@ private:
 
 #define SERVO_1_PIN 13
 #define SERVO_2_PIN 12
+#define ULTRASONIC_1_ECHO_PIN 25
+#define ULTRASONIC_1_TRIG_PIN 26
 #define INFRARED_PIN 14
 #define INDUCTIVE_PIN 27
 #define WET_PIN 34
@@ -249,6 +263,7 @@ InductiveSensor myInductiveSensor(INDUCTIVE_PIN);
 WetWasteSensor myWetSensor(WET_PIN);
 InfraredSensor myIRSensor(INFRARED_PIN);
 LiquidCrystal_I2C lcd(0x27, LCDCOLUMNS, LCDROWS);
+UltraSonicSensor myUltraSonicSensor1(ULTRASONIC_1_TRIG_PIN,ULTRASONIC_1_ECHO_PIN, 35);
 
 
 
@@ -431,7 +446,7 @@ String generateRandomId(int length = 16) {
 }
 
 void sendFilterData(){
-  
+
 }
 
 void setup() {
@@ -440,6 +455,7 @@ void setup() {
   lcd.backlight();
 	// Allow allocation of all timers
   Serial.begin(115200);
+  myUltraSonicSensor1.begin();
   displayMessage("Initiating WIFI Connection...", 0, true);
 
   initWiFi();
@@ -456,6 +472,8 @@ void setup() {
 
 
 void loop() {
+  int distance =  myUltraSonicSensor1.getDistanceCm();
+  Serial.println(distance);
 
   lcd.print("Scanning...");
   delay(3000); 
@@ -484,6 +502,7 @@ void loop() {
         displayMessage("Scanning...",0, true);      
         break;
   }
+  
 
   lcd.clear();
 
